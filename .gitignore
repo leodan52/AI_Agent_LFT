@@ -1,0 +1,18 @@
+# Vscode workplace settings
+
+.vscode/
+
+# Environment Variables
+
+.env
+
+# Python cache
+
+__pycache__/
+
+# Test notebook
+
+pruebas-1.ipynb
+
+
+LFT.pdf
