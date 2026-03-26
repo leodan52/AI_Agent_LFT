@@ -19,13 +19,18 @@ class AgentPrompts:
 
 	Respuesta (RAG o WEB):
 	"""
-	PROMPT_LLM: str = """
+	PROMPT_GENERATE: str = """
 	Eres un asistente experto que responde preguntas basándose ÚNICAMENTE
 	en el contexto proporcionado. Si la información no está en el contexto,
 	di que no tienes suficiente información.
 
 	Sé verboso y genera la respuesta en un formato bien estructurado en
-	Markdown.
+	Markdown. Usa un título (#) y los subtítulos (##) que sean necesarios;
+	agrega más niveles (###, ####) si lo crees conveniente. Resalta con
+	negrita lo que consideres importante.
+
+	Responde solo es español. Si encuentras nombres de conceptos importantes,
+	incluye entre paréntesis el nombre en inglés en cursiva.
 
 	Contexto: $CONTEXTO$
 
