@@ -1,12 +1,18 @@
+from datetime import date, datetime
 from typing import TypedDict
-from models.prompts import AgentPrompts
 
+import pdfkit
+from langchain_core.documents import Document
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage
 from langchain_core.retrievers import BaseRetriever
-from models.search_web import BaseSearchModel
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-from langchain_core.messages import AIMessage
+from markdown import markdown
+
+from models.prompts import AgentPrompts
+from models.search_web import BaseSearchModel
+
 
 class AgentState(TypedDict):
 	pregunta: str
@@ -56,6 +62,19 @@ class FederalLaborAgent:
 
 		docs = self._retriever_rag.invoke(pregunta)
 		contexto = "\n\n---\n\n".join(doc.page_content for doc in docs)
+		contexto += "\n\n---\n\n"*2 + f"Bibliografía:\n{self._get_metadata(docs)}"
+
+		bib_list = []
+		aux = {"documento_pdf" : "", "page_label" : ""}
+		for d in docs:
+			metadata = d.metadata
+			for k,v in zip(aux.keys(), ["source", "page_label"]):
+				if v in metadata:
+					aux[k] = metadata[v]
+				else:
+					aux[k] = "Sin información"
+			bib_list.append(aux.copy())
+
 
 		return {"contexto": contexto}
 
@@ -119,3 +138,73 @@ class FederalLaborAgent:
 		self._agent_state = resultado
 
 		return resultado
+
+	@staticmethod
+	def _get_metadata(docs: list[Document]) -> str:
+		biblio = dict()
+		for d in docs:
+			doc_pdf = d.metadata.get("source", "Sin información")
+			pag = d.metadata.get("page_label", "Sin información")
+
+			if str(pag).isnumeric():
+				pag = int(pag)
+
+			if doc_pdf in biblio:
+				biblio[doc_pdf].add(pag)
+			else:
+				biblio[doc_pdf] = {pag}
+
+		lineas = "\n".join(
+			[f"    * Del archivo '{k}' en las páginas {str(v)}" for k, v in biblio.items()]
+		)
+
+		return lineas
+
+	def response_to_pdf(self):
+		respuesta = self._agent_state["respuesta"].content
+		respuesta = respuesta.strip()
+		html_text = markdown(respuesta)
+		now = datetime.now()
+
+		if not respuesta:
+			return
+
+		full_html = f"""
+		<html>
+		<head>
+			<meta charset="UTF-8">
+			<style>
+				body {{
+					background-color: white !important;
+					font-family: 'Helvetica', sans-serif;
+					line-height: 1.6;
+					color: #333;
+					margin: 50px;
+				}}
+				h1 {{ color: #2c3e50; border-bottom: 2px solid #eee; }}
+				code {{ background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }}
+				blockquote {{ border-left: 5px solid #ccc; margin-left: 0; padding-left: 15px; color: #666; }}
+			</style>
+		</head>
+		<body>
+			{html_text}
+		</body>
+		</html>
+		"""
+
+		options = {
+			'encoding': "UTF-8",
+			'margin-top': '0.75in',
+			'margin-right': '0.75in',
+			'margin-bottom': '0.75in',
+			'margin-left': '0.75in',
+		}
+
+		pdfkit.from_string(full_html, f"Report_{now}.pdf", options=options)
+
+	def response_to_markdown(self):
+		respuesta = self._agent_state["respuesta"].content
+		respuesta = respuesta.strip()
+		now = datetime.now()
+		with open(f"Reporte_{now}.md", "w") as f:
+			f.write(respuesta)
