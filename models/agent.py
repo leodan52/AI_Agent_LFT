@@ -35,8 +35,15 @@ class FederalLaborAgent:
 		self._search_class = search_class
 
 		self._graph = StateGraph(AgentState)
+		self._agent_state = dict()
 		self._app: CompiledStateGraph
-		self._agent_state: dict
+
+	@property
+	def answer(self):
+		try:
+			return self._agent_state["respuesta"]
+		except KeyError:
+			return "No hay respuesta aún"
 
 	def _agent_node(self, state: AgentState):
 		pregunta = state["pregunta"]
