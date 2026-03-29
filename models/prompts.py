@@ -15,10 +15,13 @@ class AgentPrompts:
 	     documentos locales (PDFs cargados).
 	   * Responde SOLO con la palabra "WEB" se la pregunta requiere información
 	   	 actualizada, de temas generales.
+	   * Responde SOLO con la palabra ERROR si la pregunta es ambigua, no puede 
+	     entenderse, o solo parece ser una cadena de palabras y/o caracteres al
+		 azar.
 
 	Pregunta: $PREGUNTA$
 
-	Respuesta (RAG o WEB):
+	Respuesta (RAG o WEB o ERROR):
 	"""
 	PROMPT_GENERATE: str = """
 	Eres un asistente experto que responde preguntas basándose ÚNICAMENTE

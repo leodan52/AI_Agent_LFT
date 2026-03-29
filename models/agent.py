@@ -18,7 +18,9 @@ class AgentState(TypedDict):
 	pregunta: str
 	fuente: str
 	contexto: str
-	respuesta: AIMessage
+	respuesta: str
+	bibliografia: str
+	metadata_respuesta: dict
 
 class FederalLaborAgent:
 	def __init__(
@@ -50,8 +52,10 @@ class FederalLaborAgent:
 
 		if "rag" in fuente.lower():
 			fuente = "RAG"
-		else:
+		elif "web" in fuente.lower():
 			fuente = "WEB"
+		else:
+			fuente = "ERROR"
 
 		print(f"El agente decidió '{fuente}'")
 
@@ -62,39 +66,38 @@ class FederalLaborAgent:
 
 		docs = self._retriever_rag.invoke(pregunta)
 		contexto = "\n\n---\n\n".join(doc.page_content for doc in docs)
-		contexto += "\n\n---\n\n"*2 + f"Bibliografía:\n{self._get_metadata(docs)}"
+		bibliografia = self._get_metadata(docs)
+		#contexto += "\n\n---\n\n"*2 + f"Bibliografía:\n{self._get_metadata(docs)}"
 
-		bib_list = []
-		aux = {"documento_pdf" : "", "page_label" : ""}
-		for d in docs:
-			metadata = d.metadata
-			for k,v in zip(aux.keys(), ["source", "page_label"]):
-				if v in metadata:
-					aux[k] = metadata[v]
-				else:
-					aux[k] = "Sin información"
-			bib_list.append(aux.copy())
-
-
-		return {"contexto": contexto}
+		return {"contexto": contexto, "bibliografia" : bibliografia}
 
 	def _search_node(self, state: AgentState):
 		contexto = self._search_class.search(state["pregunta"])
 
-		return {"contexto": contexto}
+		return {"contexto": contexto, "bibliografia" : ""}
+
+	def _error_classifier_node(self, state: AgentState):
+		respuesta = "La pregunta realizada es ambigua. Realiza otra con más información"
+
+		return {"respuesta" : respuesta, "bibliografia" : ""}
 
 	def _generate_node(self, state: AgentState):
 		contexto = state["contexto"]
 		pregunta = state["pregunta"]
+		bibliografia = state["bibliografia"]
+
+		if bibliografia:
+			contexto += f"\nBibliografía:\n{bibliografia}\n"
+
 		prompt = (
 			self._agent_prompts.PROMPT_GENERATE
 				.replace("$CONTEXTO$", contexto)
 				.replace("$PREGUNTA$", pregunta)
 		)
 
-		respuesta = self._chat_model.invoke(prompt)
+		messege = self._chat_model.invoke(prompt)
 
-		return {"respuesta" : respuesta}
+		return {"respuesta" : messege.content, "metadata_respuesta" : messege.usage_metadata}
 
 	def _choice_source(self, state: AgentState):
 		if state["fuente"] == "RAG":
@@ -108,6 +111,7 @@ class FederalLaborAgent:
 		self._graph.add_node("Agent", self._agent_node)
 		self._graph.add_node("RAG", self._rag_node)
 		self._graph.add_node("WEB", self._search_node)
+		self._graph.add_node("ERROR", self._error_classifier_node)
 		self._graph.add_node("Generator", self._generate_node)
 
 		self._graph.add_edge(START, "Agent")
@@ -115,11 +119,13 @@ class FederalLaborAgent:
 			"Agent", self._choice_source,
 			{
 				"RAG" : "RAG",
-				"WEB" : "WEB"
+				"WEB" : "WEB",
+				"ERROR" : "ERROR"
 			}
 		)
 		self._graph.add_edge("RAG", "Generator")
 		self._graph.add_edge("WEB", "Generator")
+		self._graph.add_edge("ERROR", END)
 		self._graph.add_edge("Generator", END)
 
 		self._app = self._graph.compile()
@@ -132,6 +138,8 @@ class FederalLaborAgent:
 				"fuente" : "",
 				"contexto" : "",
 				"respuesta" : "",
+				"bibliografia" : "",
+				"metadata_respuesta" : dict(),
 			}
 		)
 
@@ -161,9 +169,9 @@ class FederalLaborAgent:
 		return lineas
 
 	def response_to_pdf(self):
-		respuesta = self._agent_state["respuesta"].content
+		respuesta = self._agent_state["respuesta"]
 		respuesta = respuesta.strip()
-		html_text = markdown(respuesta)
+		html_text = markdown(respuesta, extensions=["extra", "sane_lists"])
 		now = datetime.now()
 
 		if not respuesta:
@@ -203,7 +211,7 @@ class FederalLaborAgent:
 		pdfkit.from_string(full_html, f"Report_{now}.pdf", options=options)
 
 	def response_to_markdown(self):
-		respuesta = self._agent_state["respuesta"].content
+		respuesta = self._agent_state["respuesta"]
 		respuesta = respuesta.strip()
 		now = datetime.now()
 		with open(f"Reporte_{now}.md", "w") as f:
