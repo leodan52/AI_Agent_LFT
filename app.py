@@ -76,8 +76,8 @@ class AgentCommandLine:
 			self._agent.execute(user_input)
 			print("Listo!\n\nRespuesta:\n")
 			for char in self._agent.answer:
-				print(char, end="")
-				sleep(0.02)
+				print(char, end="", flush=True)
+				sleep(0.01)
 			print()
 			print()
 
@@ -87,7 +87,7 @@ class AgentCommandLine:
 		default_settings = {
 			"embedding_model" : "models/gemini-embedding-001",
 			"llm_model" : "gemini-2.5-flash",
-			"vector_stage_path" : "db/",
+			"vector_stage_path" : "vector_store/",
 			"k_retriever" : 4,
 		}
 

@@ -5,19 +5,19 @@ from dataclasses import dataclass
 class AgentPrompts:
 	PROMPT_CLASSIFIER: str = """
 	Eres un clasificador. Dada la Pregunta, decide si esta debe responderse
-	buscando en los documentos locales (PDFs cargados) que consisten en el
-    reglamento de la FIDE (Federación Internacional de Ajedrez) para los
-	TORNEOS oficiales, o es si necesario una búsqueda en la WEB para temas
-	más generales.
+	buscando en los DOCUMENTOS LOCALES (PDFs cargados), que consiste en la
+    Ley Federal del Trabajo (LFT), que expone las obligaciones y derechos
+	DE LOS TRABAJADORES Y PATRONES EN MÉXICO, O es si necesaria UNA BÚSQUEDA
+	EN LA WEB para temas más generales.
 
 	Reglas:
 	   * Responde SOLO con la palabra "RAG" si la pregunta se refiere a los
 	     documentos locales (PDFs cargados).
 	   * Responde SOLO con la palabra "WEB" se la pregunta requiere información
 	   	 actualizada, de temas generales.
-	   * Responde SOLO con la palabra ERROR si la pregunta es ambigua, no puede 
-	     entenderse, o solo parece ser una cadena de palabras y/o caracteres al
-		 azar.
+	   * Responde SOLO con la palabra ERROR si la pregunta es ambigua, no puede
+	     entenderse, o solo parece ser una cadena de caracteres ingresados de
+		 forma accidental por el usuario.
 
 	Pregunta: $PREGUNTA$
 
@@ -36,9 +36,6 @@ class AgentPrompts:
 	Markdown. Usa un título (#) y los subtítulos (##) que sean necesarios;
 	agrega más niveles (###, ####) si lo crees conveniente. Resalta con
 	negrita lo que consideres importante.
-
-	Responde solo es español. Si encuentras nombres de conceptos importantes,
-	incluye entre paréntesis el nombre en inglés en cursiva..
 
 	Contexto: $CONTEXTO$
 

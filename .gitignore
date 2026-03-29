@@ -16,9 +16,15 @@ pruebas-1.ipynb
 
 # Vector store persistence files
 
-db/
+vector_store/
 
 # Reports
-Report_*.pdf
+Report_*
+
+# Database file
 
 LFT.pdf
+
+# Settings path
+
+settings/
